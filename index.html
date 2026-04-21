@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Player Progression — Razz Gaming Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&family=Bebas+Neue&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #050508;
+    --deep: #0a0a12;
+    --panel: #0d0d18;
+    --panel2: #111120;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --purple: #7c5cbf;
+    --purple-bright: #a07fe0;
+    --purple-glow: rgba(124,92,191,0.35);
+    --blue: #3a82f7;
+    --blue-glow: rgba(58,130,247,0.3);
+    --green: #22d87a;
+    --green-glow: rgba(34,216,122,0.3);
+    --amber: #f5a623;
+    --amber-glow: rgba(245,166,35,0.3);
+    --coral: #ff4d4d;
+    --coral-glow: rgba(255,77,77,0.35);
+    --razz: #ff3c00;
+    --razz-glow: rgba(255,60,0,0.4);
+    --text: #e8e8ff;
+    --muted: #6b6b8a;
+    --dim: #3a3a55;
+    --font-hud: 'Share Tech Mono', monospace;
+    --font-title: 'Orbitron', monospace;
+    --font-body: 'Rajdhani', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--black);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    overflow-x: hidden;
+    cursor: crosshair;
+  }
+
+  /* Scanline overlay */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+    pointer-events: none; z-index: 9999;
+  }
+
+  /* Grid background */
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(124,92,191,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,92,191,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none; z-index: 0;
+  }
+
+  .wrap { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 0 24px 80px; }
+
+  /* ── HEADER ── */
+  .header {
+    padding: 48px 0 32px;
+    text-align: center;
+    position: relative;
+  }
+
+  .header-badge {
+    display: inline-block;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--razz);
+    border: 1px solid var(--razz);
+    padding: 4px 22px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    position: relative;
+  }
+  .header-badge::before, .header-badge::after {
+    content: '';
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 20px; height: 1px; background: var(--razz);
+  }
+  .header-badge::before { right: 100%; margin-right: 8px; }
+  .header-badge::after  { left:  100%; margin-left:  8px; }
+
+  h1 {
+    font-family: var(--font-title);
+    font-size: clamp(28px, 5vw, 52px);
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    line-height: 1.1;
+    background: linear-gradient(135deg, #fff 0%, var(--purple-bright) 40%, var(--razz) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 12px;
+  }
+
+  .hook-line {
+    font-family: var(--font-hud);
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+  .hook-line span { color: var(--purple-bright); }
+
+  /* corner decorations */
+  .corner-dec {
+    position: absolute;
+    width: 40px; height: 40px;
+    border-color: var(--razz);
+    border-style: solid;
+    opacity: 0.5;
+  }
+  .corner-dec.tl { top: 24px; left: 0; border-width: 2px 0 0 2px; }
+  .corner-dec.tr { top: 24px; right: 0; border-width: 2px 2px 0 0; }
+
+  /* ── GLOBAL STATS BAR ── */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border2);
+    margin-bottom: 36px;
+    position: relative;
+    overflow: hidden;
+  }
+  .stats-bar::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(124,92,191,0.06), transparent);
+    animation: sweep 4s linear infinite;
+  }
+  @keyframes sweep {
+    from { transform: translateX(-100%); }
+    to   { transform: translateX(100%); }
+  }
+  .stat-cell {
+    background: var(--panel);
+    padding: 14px 16px;
+    text-align: center;
+  }
+  .stat-label {
+    font-family: var(--font-hud);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .stat-val {
+    font-family: var(--font-title);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .stat-val.razz  { color: var(--razz); }
+  .stat-val.green { color: var(--green); }
+  .stat-val.amber { color: var(--amber); }
+
+  /* ── LEVEL SELECTOR ── */
+  .level-tabs {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+  .level-tab {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 12px 8px 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+  }
+  .level-tab::after {
+    content: '';
+    position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+    background: var(--tab-color, var(--purple));
+    transform: scaleX(0);
+    transition: transform 0.2s;
+  }
+  .level-tab:hover::after,
+  .level-tab.active::after { transform: scaleX(1); }
+  .level-tab.active {
+    background: var(--panel2);
+    border-color: var(--tab-color, var(--purple));
+    box-shadow: 0 0 20px var(--tab-glow, var(--purple-glow));
+  }
+  .tab-num {
+    font-family: var(--font-hud);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+  }
+  .tab-icon { font-size: 20px; display: block; margin-bottom: 4px; }
+  .tab-name {
+    font-family: var(--font-title);
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 0.04em;
+    line-height: 1.3;
+  }
+  .tab-years {
+    font-family: var(--font-hud);
+    font-size: 9px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .tab-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--tab-color, var(--purple));
+    margin: 6px auto 0;
+    box-shadow: 0 0 6px var(--tab-glow, var(--purple-glow));
+  }
+
+  /* ── MAIN DETAIL PANEL ── */
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border2);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* corner marks on panels */
+  .panel::before, .panel::after {
+    content: '';
+    position: absolute;
+    width: 12px; height: 12px;
+    border-color: var(--active-color, var(--purple));
+    border-style: solid;
+    opacity: 0.6;
+    transition: border-color 0.3s;
+  }
+  .panel::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+  .panel::after  { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+
+  .panel-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .panel-title-label {
+    font-family: var(--font-hud);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .panel-title-val {
+    font-family: var(--font-title);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 0.04em;
+  }
+  .level-badge-big {
+    width: 48px; height: 48px; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+    background: var(--panel2);
+    border: 1px solid var(--active-color, var(--purple));
+    box-shadow: 0 0 16px var(--active-glow, var(--purple-glow));
+    flex-shrink: 0;
+    transition: all 0.3s;
+  }
+
+  .panel-body { padding: 20px; }
+
+  .xp-row {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 20px;
+  }
+  .xp-label-hud {
+    font-family: var(--font-hud);
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+    min-width: 24px;
+  }
+  .xp-track {
+    flex: 1; height: 8px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 1px;
+    overflow: hidden;
+    position: relative;
+  }
+  .xp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--active-color, var(--purple)), var(--active-bright, var(--purple-bright)));
+    box-shadow: 0 0 8px var(--active-glow, var(--purple-glow));
+    transition: width 0.8s cubic-bezier(.4,0,.2,1);
+    position: relative;
+  }
+  .xp-fill::after {
+    content: '';
+    position: absolute; right: 0; top: 0; bottom: 0; width: 3px;
+    background: white;
+    opacity: 0.8;
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 0.3; } 50% { opacity: 1; } }
+  .xp-pct {
+    font-family: var(--font-hud);
+    font-size: 11px;
+    color: var(--active-color, var(--purple));
+    min-width: 36px;
+    text-align: right;
+    transition: color 0.3s;
+  }
+
+  .desc-text {
+    font-family: var(--font-body);
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.7;
+    margin-bottom: 20px;
+  }
+
+  .unlocked-row {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-bottom: 0;
+  }
+  .unlock-chip {
+    font-family: var(--font-hud);
+    font-size: 10px;
+    padding: 5px 12px;
+    border: 1px solid var(--active-color, var(--purple));
+    color: var(--active-color, var(--purple));
+    background: rgba(0,0,0,0.3);
+    letter-spacing: 0.06em;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .unlock-chip::before {
+    content: '▸ ';
+    font-size: 9px;
+    opacity: 0.7;
+  }
+
+  /* ── XP BAR PANEL (right side) ── */
+  .xp-panel { padding: 20px; }
+
+  .mini-xp-section { margin-bottom: 14px; }
+  .mini-xp-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 6px;
+  }
+  .mini-lv-name {
+    font-family: var(--font-hud);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+  }
+  .mini-lv-xp {
+    font-family: var(--font-hud);
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .mini-track {
+    height: 5px; background: var(--panel2);
+    border: 1px solid var(--border); border-radius: 1px; overflow: hidden;
+  }
+  .mini-fill {
+    height: 100%;
+    transition: width 0.6s ease;
+  }
+  .mini-xp-section.done .mini-lv-name { color: var(--green); }
+  .mini-xp-section.active-bar .mini-lv-name { color: var(--text); }
+  .mini-xp-section.locked .mini-lv-name { color: var(--dim); }
+
+  /* ── BOTTOM ROW ── */
+  .bottom-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+  }
+
+  .section-label {
+    font-family: var(--font-hud);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-label::before {
+    content: '';
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--active-color, var(--purple));
+    border-radius: 50%;
+    box-shadow: 0 0 6px var(--active-glow, var(--purple-glow));
+    transition: all 0.3s;
+  }
+
+  /* Skill Tree */
+  .skill-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 14px;
+  }
+  .skill-node {
+    border: 1px solid var(--border);
+    padding: 10px;
+    text-align: center;
+    position: relative;
+    transition: all 0.25s;
+  }
+  .skill-node.unlocked {
+    border-color: var(--active-color, var(--purple));
+    background: rgba(0,0,0,0.4);
+  }
+  .skill-node.locked { opacity: 0.35; }
+  .skill-icon { font-size: 18px; display: block; margin-bottom: 5px; }
+  .skill-name {
+    font-family: var(--font-hud);
+    font-size: 9px;
+    color: var(--text);
+    letter-spacing: 0.04em;
+    line-height: 1.3;
+  }
+  .skill-status {
+    font-family: var(--font-hud);
+    font-size: 8px;
+    margin-top: 4px;
+  }
+  .skill-node.unlocked .skill-status { color: var(--green); }
+  .skill-node.locked    .skill-status { color: var(--dim); }
+
+  /* Achievements */
+  .ach-list { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .ach-row {
+    display: flex; align-items: center; gap: 10px;
+    border: 1px solid var(--border);
+    padding: 10px 12px;
+    transition: all 0.25s;
+  }
+  .ach-row.earned {
+    border-color: var(--amber);
+    background: rgba(245,166,35,0.05);
+  }
+  .ach-row.locked { opacity: 0.3; }
+  .ach-ico { font-size: 18px; flex-shrink: 0; }
+  .ach-info { flex: 1; }
+  .ach-name {
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .ach-sub {
+    font-family: var(--font-hud);
+    font-size: 9px;
+    color: var(--muted);
+    margin-top: 2px;
+    letter-spacing: 0.04em;
+  }
+  .ach-check {
+    font-family: var(--font-hud);
+    font-size: 10px;
+  }
+  .ach-row.earned  .ach-check { color: var(--amber); }
+  .ach-row.locked  .ach-check { color: var(--dim); }
+
+  /* Avatar */
+  .avatar-panel { padding: 16px; text-align: center; }
+  .avatar-wrap {
+    width: 120px; height: 120px;
+    margin: 0 auto 14px;
+    border: 2px solid var(--active-color, var(--purple));
+    box-shadow: 0 0 24px var(--active-glow, var(--purple-glow)), inset 0 0 24px rgba(0,0,0,0.5);
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 64px;
+    background: var(--panel2);
+    transition: all 0.4s;
+    position: relative;
+    overflow: hidden;
+  }
+  .avatar-wrap::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, transparent 60%, var(--active-color, var(--purple)) 200%);
+    opacity: 0.2;
+    transition: all 0.4s;
+  }
+  .avatar-lv {
+    font-family: var(--font-title);
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--active-color, var(--purple));
+    text-shadow: 0 0 20px var(--active-glow, var(--purple-glow));
+    transition: all 0.3s;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .avatar-name {
+    font-family: var(--font-hud);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .avatar-class {
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    border: 1px solid var(--active-color, var(--purple));
+    display: inline-block;
+    padding: 4px 14px;
+    transition: all 0.3s;
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    margin-top: 40px;
+    text-align: center;
+    padding: 20px;
+    border: 1px solid var(--border);
+    position: relative;
+  }
+  .footer-logo {
+    font-family: var(--font-title);
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: 0.15em;
+    background: linear-gradient(90deg, var(--purple-bright), var(--razz));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .footer-sub {
+    font-family: var(--font-hud);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    margin-top: 6px;
+  }
+
+  /* Transition animation for level switch */
+  .panel-body, .xp-panel { transition: opacity 0.15s; }
+  .panel-body.fade, .xp-panel.fade { opacity: 0; }
+
+  @media (max-width: 768px) {
+    .detail-grid { grid-template-columns: 1fr; }
+    .bottom-row  { grid-template-columns: 1fr; }
+    .level-tabs  { grid-template-columns: repeat(5, 1fr); gap: 4px; }
+    .tab-name    { font-size: 8px; }
+    .stats-bar   { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="corner-dec tl"></div>
+    <div class="corner-dec tr"></div>
+    <div class="header-badge">Rishit Srivastava</div>
+    <h1>PLAYER PROGRESSION</h1>
+    <p class="hook-line">"I didn't just play games. <span>I leveled up through them.</span>"</p>
+  </div>
+
+  <!-- GLOBAL STATS -->
+  <div class="stats-bar">
+    <div class="stat-cell">
+      <div class="stat-label">Total XP</div>
+      <div class="stat-val razz" id="total-xp">500</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">Current Level</div>
+      <div class="stat-val" id="cur-level">01</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">Skills Unlocked</div>
+      <div class="stat-val green" id="skills-count">2 / 6</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">Status</div>
+      <div class="stat-val amber" id="status-val">ACTIVE</div>
+    </div>
+  </div>
+
+  <!-- LEVEL TABS -->
+  <div class="level-tabs" id="level-tabs"></div>
+
+  <!-- DETAIL GRID -->
+  <div class="detail-grid">
+
+    <!-- Left: Main Detail -->
+    <div class="panel" id="main-panel">
+      <div class="panel-header">
+        <div class="level-badge-big" id="badge-big">🕹️</div>
+        <div>
+          <div class="panel-title-label" id="phase-label">LV 01 &nbsp;·&nbsp; NOOB PHASE</div>
+          <div class="panel-title-val" id="phase-name">Noob Phase</div>
+        </div>
+      </div>
+      <div class="panel-body" id="panel-body">
+        <div class="xp-row">
+          <span class="xp-label-hud">XP</span>
+          <div class="xp-track">
+            <div class="xp-fill" id="xp-fill" style="width:10%"></div>
+          </div>
+          <span class="xp-pct" id="xp-pct">10%</span>
+        </div>
+        <p class="desc-text" id="desc-text">Flash games and early mobile titles. Playing purely for fun — no awareness of gaming as a career. Low XP, basic avatar, pixel-world aesthetics.</p>
+        <div class="unlocked-row" id="chips-row"></div>
+      </div>
+    </div>
+
+    <!-- Right: XP Progress Overview -->
+    <div class="panel" id="xp-overview-panel">
+      <div class="section-label">Progress Log</div>
+      <div class="xp-panel" id="xp-overview"></div>
+    </div>
+
+  </div>
+
+  <!-- BOTTOM ROW -->
+  <div class="bottom-row">
+
+    <!-- Skill Tree -->
+    <div class="panel">
+      <div class="section-label" id="skill-label">Skill Tree</div>
+      <div class="skill-grid" id="skill-grid"></div>
+    </div>
+
+    <!-- Achievements -->
+    <div class="panel">
+      <div class="section-label" id="ach-label">Achievements</div>
+      <div class="ach-list" id="ach-list"></div>
+    </div>
+
+    <!-- Avatar -->
+    <div class="panel">
+      <div class="section-label">Character Build</div>
+      <div class="avatar-panel">
+        <div class="avatar-wrap" id="avatar-wrap">
+          <span id="avatar-emoji">🕹️</span>
+        </div>
+        <div class="avatar-lv" id="avatar-lv">LV.1</div>
+        <div class="avatar-name">RAZZ GAMER</div>
+        <div class="avatar-class" id="avatar-class">CASUAL PLAYER</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-logo">RAZZ GAMING STUDIO</div>
+    <div class="footer-sub">gaming = identity evolution &nbsp;·&nbsp; character build complete</div>
+  </div>
+
+</div>
+
+<script>
+const levels = [
+  {
+    num: 1, icon: '🕹️', name: 'Noob Phase', years: '2008–2013',
+    color: '--purple', bright: '--purple-bright', glow: '--purple-glow',
+    colorVal: '#7c5cbf', brightVal: '#a07fe0', glowVal: 'rgba(124,92,191,0.35)',
+    xpPct: 10, xpRaw: 500,
+    desc: 'Flash games and early mobile titles. Playing purely for fun — no awareness of gaming as a career. Low XP, basic avatar, pixel-world aesthetics.',
+    skills: ['Curiosity', 'Pattern Recognition', 'Quick Reflexes'],
+    skillIdx: [0, 1],
+    avatarClass: 'CASUAL PLAYER',
+    phaseTag: 'NOOB PHASE',
+    status: 'ORIGIN'
+  },
+  {
+    num: 2, icon: '🗺️', name: 'Explorer Phase', years: '2013–2017',
+    color: '--blue', bright: '--blue', glow: '--blue-glow',
+    colorVal: '#3a82f7', brightVal: '#6aaaf9', glowVal: 'rgba(58,130,247,0.3)',
+    xpPct: 30, xpRaw: 1500,
+    desc: 'Console exposure — PS, PC gaming. Discovery of genres: FPS, racing, RPG. The map opens up. New skills unlocked. UI gets richer.',
+    skills: ['Genre Mastery', 'Persistence', 'Resource Mgmt'],
+    skillIdx: [0, 1, 2],
+    avatarClass: 'EXPLORER',
+    phaseTag: 'EXPLORER PHASE',
+    status: 'LEVELING'
+  },
+  {
+    num: 3, icon: '🏆', name: 'Competitive Phase', years: '2018–2020',
+    color: '--green', bright: '--green', glow: '--green-glow',
+    colorVal: '#22d87a', brightVal: '#4be898', glowVal: 'rgba(34,216,122,0.3)',
+    xpPct: 56, xpRaw: 2800,
+    desc: 'Multiplayer, online gaming, esports awareness. Leaderboards lit up. Rank badges earned. Pressure tested. Intensity: MAXIMUM.',
+    skills: ['Teamwork', 'Strategy', 'Pressure Handling'],
+    skillIdx: [0, 1, 2, 3],
+    avatarClass: 'RANKED PLAYER',
+    phaseTag: 'COMPETITIVE PHASE',
+    status: 'RANKED'
+  },
+  {
+    num: 4, icon: '🧬', name: 'Identity Phase', years: '2020–2022',
+    color: '--amber', bright: '--amber', glow: '--amber-glow',
+    colorVal: '#f5a623', brightVal: '#ffc153', glowVal: 'rgba(245,166,35,0.3)',
+    xpPct: 80, xpRaw: 4000,
+    desc: 'Gaming becomes core personality. Pandemic era = deep immersion. Community building begins. Avatar evolves, squads form. Identity locked.',
+    skills: ['Branding', 'Community Building', 'Self-Expression'],
+    skillIdx: [0, 1, 2, 3, 4],
+    avatarClass: 'COMMUNITY LEAD',
+    phaseTag: 'IDENTITY PHASE',
+    status: 'GRIND MODE'
+  },
+  {
+    num: 5, icon: '🔥', name: 'Creator Phase', years: '2022–Now',
+    color: '--razz', bright: '--razz', glow: '--razz-glow',
+    colorVal: '#ff3c00', brightVal: '#ff6a33', glowVal: 'rgba(255,60,0,0.4)',
+    xpPct: 100, xpRaw: 5000,
+    desc: 'Razz Gaming Studio launched. Entrepreneurship unlocked. Designing space + brand. Final boss: the Real World. FULL XP. GAME CREATOR.',
+    skills: ['Entrepreneurship', 'Design Thinking', 'Leadership', 'Business Mindset'],
+    skillIdx: [0, 1, 2, 3, 4, 5],
+    avatarClass: 'GAME CREATOR',
+    phaseTag: 'CREATOR PHASE',
+    status: 'FINAL BOSS'
+  }
+];
+
+const allSkills = [
+  { name: 'Curiosity',       icon: '🔍' },
+  { name: 'Pattern Recog',   icon: '🧩' },
+  { name: 'Strategy',        icon: '♟️' },
+  { name: 'Teamwork',        icon: '🤝' },
+  { name: 'Brand Identity',  icon: '⚡' },
+  { name: 'Business Mind',   icon: '📈' }
+];
+
+const achievements = [
+  { name: 'First Login',      sub: 'Started the journey',      icon: '🟢' },
+  { name: 'Genre Unlocked',   sub: 'Discovered game types',     icon: '🔵' },
+  { name: 'Ranked Player',    sub: 'Hit competitive mode',      icon: '🥇' },
+  { name: 'Squad Leader',     sub: 'Built a community',         icon: '👾' },
+  { name: 'Studio Founder',   sub: 'Razz Gaming Studio live',   icon: '🔥' }
+];
+
+let active = 0;
+
+function setCSS(el, varName, val) {
+  el.style.setProperty(varName, val);
+}
+
+function renderTabs() {
+  const tabs = document.getElementById('level-tabs');
+  tabs.innerHTML = '';
+  levels.forEach((lv, i) => {
+    const tab = document.createElement('div');
+    tab.className = 'level-tab' + (i === active ? ' active' : '');
+    tab.style.setProperty('--tab-color', lv.colorVal);
+    tab.style.setProperty('--tab-glow', lv.glowVal);
+    tab.innerHTML = `
+      <div class="tab-num">LV 0${lv.num}</div>
+      <span class="tab-icon">${lv.icon}</span>
+      <div class="tab-name">${lv.name.toUpperCase()}</div>
+      <div class="tab-years">${lv.years}</div>
+      <div class="tab-dot"></div>
+    `;
+    tab.onclick = () => switchLevel(i);
+    tabs.appendChild(tab);
+  });
+}
+
+function renderXPOverview() {
+  const lv = levels[active];
+  const cont = document.getElementById('xp-overview');
+  cont.innerHTML = '';
+  levels.forEach((l, i) => {
+    const state = i < active ? 'done' : i === active ? 'active-bar' : 'locked';
+    const pct = state === 'done' ? 100 : state === 'active-bar' ? l.xpPct : 0;
+    const color = state === 'done' ? '#22d87a' : state === 'active-bar' ? l.colorVal : '#2a2a3a';
+    const div = document.createElement('div');
+    div.className = `mini-xp-section ${state}`;
+    div.innerHTML = `
+      <div class="mini-xp-head">
+        <span class="mini-lv-name" style="color:${state==='done'?'#22d87a':state==='active-bar'?l.colorVal:'#3a3a55'}">${l.name.toUpperCase()}</span>
+        <span class="mini-lv-xp">${state === 'locked' ? '---' : l.xpRaw.toLocaleString() + ' XP'}</span>
+      </div>
+      <div class="mini-track">
+        <div class="mini-fill" style="width:${pct}%;background:${color};box-shadow:0 0 6px ${l.glowVal}"></div>
+      </div>
+    `;
+    cont.appendChild(div);
+  });
+}
+
+function renderSkillGrid() {
+  const lv = levels[active];
+  const grid = document.getElementById('skill-grid');
+  grid.innerHTML = '';
+  allSkills.forEach((sk, i) => {
+    const unlocked = lv.skillIdx.includes(i);
+    const div = document.createElement('div');
+    div.className = 'skill-node ' + (unlocked ? 'unlocked' : 'locked');
+    if (unlocked) {
+      div.style.borderColor = lv.colorVal;
+      div.style.boxShadow = `0 0 8px ${lv.glowVal}`;
+    }
+    div.innerHTML = `
+      <span class="skill-icon">${sk.icon}</span>
+      <div class="skill-name">${sk.name}</div>
+      <div class="skill-status">${unlocked ? '✓ UNLOCKED' : 'LOCKED'}</div>
+    `;
+    grid.appendChild(div);
+  });
+}
+
+function renderAchievements() {
+  const list = document.getElementById('ach-list');
+  list.innerHTML = '';
+  achievements.forEach((a, i) => {
+    const earned = i <= active;
+    const div = document.createElement('div');
+    div.className = 'ach-row ' + (earned ? 'earned' : 'locked');
+    div.innerHTML = `
+      <span class="ach-ico">${a.icon}</span>
+      <div class="ach-info">
+        <div class="ach-name">${a.name}</div>
+        <div class="ach-sub">${a.sub}</div>
+      </div>
+      <span class="ach-check">${earned ? '✓ EARNED' : '···'}</span>
+    `;
+    list.appendChild(div);
+  });
+}
+
+function renderDetail(lv) {
+  document.getElementById('badge-big').textContent = lv.icon;
+  document.getElementById('badge-big').style.borderColor = lv.colorVal;
+  document.getElementById('badge-big').style.boxShadow = `0 0 16px ${lv.glowVal}`;
+  document.getElementById('phase-label').textContent = `LV 0${lv.num}  ·  ${lv.phaseTag}`;
+  document.getElementById('phase-name').textContent = lv.name;
+  document.getElementById('xp-fill').style.width = lv.xpPct + '%';
+  document.getElementById('xp-pct').textContent = lv.xpPct + '%';
+  document.getElementById('xp-pct').style.color = lv.colorVal;
+  document.getElementById('desc-text').textContent = lv.desc;
+
+  const chips = document.getElementById('chips-row');
+  chips.innerHTML = '';
+  lv.skills.forEach(s => {
+    const chip = document.createElement('div');
+    chip.className = 'unlock-chip';
+    chip.style.borderColor = lv.colorVal;
+    chip.style.color = lv.colorVal;
+    chip.textContent = s;
+    chips.appendChild(chip);
+  });
+
+  // Avatar
+  document.getElementById('avatar-emoji').textContent = lv.icon;
+  document.getElementById('avatar-wrap').style.borderColor = lv.colorVal;
+  document.getElementById('avatar-wrap').style.boxShadow = `0 0 24px ${lv.glowVal}, inset 0 0 24px rgba(0,0,0,0.5)`;
+  document.getElementById('avatar-lv').textContent = `LV.${lv.num}`;
+  document.getElementById('avatar-lv').style.color = lv.colorVal;
+  document.getElementById('avatar-lv').style.textShadow = `0 0 20px ${lv.glowVal}`;
+  document.getElementById('avatar-class').textContent = lv.avatarClass;
+  document.getElementById('avatar-class').style.borderColor = lv.colorVal;
+  document.getElementById('avatar-class').style.color = lv.colorVal;
+
+  // Stats bar
+  document.getElementById('total-xp').textContent = lv.xpRaw.toLocaleString();
+  document.getElementById('cur-level').textContent = '0' + lv.num;
+  document.getElementById('skills-count').textContent = lv.skillIdx.length + ' / 6';
+  document.getElementById('status-val').textContent = lv.status;
+
+  // Panel active color
+  ['main-panel', 'xp-overview-panel'].forEach(id => {
+    document.getElementById(id).style.setProperty('--active-color', lv.colorVal);
+    document.getElementById(id).style.setProperty('--active-glow', lv.glowVal);
+  });
+  document.querySelectorAll('.section-label').forEach(el => {
+    el.style.setProperty('--active-color', lv.colorVal);
+    el.style.setProperty('--active-glow', lv.glowVal);
+  });
+}
+
+function switchLevel(i) {
+  active = i;
+  const lv = levels[active];
+  renderTabs();
+  renderDetail(lv);
+  renderXPOverview();
+  renderSkillGrid();
+  renderAchievements();
+}
+
+// Init
+switchLevel(0);
+
+// Boot animation
+window.addEventListener('load', () => {
+  setTimeout(() => switchLevel(4), 400);
+  setTimeout(() => switchLevel(0), 800);
+});
+</script>
+</body>
+</html>
